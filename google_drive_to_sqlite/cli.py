@@ -8,7 +8,7 @@ import sqlite_utils
 import sys
 import textwrap
 import urllib.parse
-from .utils import (
+from utils import (
     APIClient,
     get_file,
     files_in_folder_recursive,
@@ -16,12 +16,19 @@ from .utils import (
     save_files_and_folders,
 )
 
+# Información confidencial
+with open("../privado/credenciales.json") as f:
+    credentials = json.load(f)
+with open("../privado/directorio_a_procesar.json") as f:
+    credentials["folder_id"] = json.load(f)
+
 # https://github.com/simonw/google-drive-to-sqlite/issues/2
 GOOGLE_CLIENT_ID = (
-    "148933860554-98i3hter1bsn24sa6fcq1tcrhcrujrnl.apps.googleusercontent.com"
+#    "148933860554-98i3hter1bsn24sa6fcq1tcrhcrujrnl.apps.googleusercontent.com"
+"1076851577241-ijb3tbv6f40h1ibmrfkb8bkkjlrvfdh6.apps.googleusercontent.com"
 )
 # It's OK to publish this secret in application source code
-GOOGLE_CLIENT_SECRET = "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"
+GOOGLE_CLIENT_SECRET = "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"  # "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"
 DEFAULT_SCOPE = "https://www.googleapis.com/auth/drive.readonly"
 
 FORMAT_SHORTCUTS = {
@@ -100,11 +107,11 @@ DEFAULT_FIELDS = [
 
 @click.group()
 @click.version_option()
-def cli():
+def gd2sqlite():
     "Create a SQLite database of metadata from a Google Drive folder"
 
 
-@cli.command()
+@gd2sqlite.command()
 @click.option(
     "-a",
     "--auth",
@@ -164,7 +171,7 @@ def auth(auth, google_client_id, google_client_secret, scope):
     pathlib.Path(auth).chmod(0o600)
 
 
-@cli.command()
+@gd2sqlite.command()
 @click.option(
     "-a",
     "--auth",
@@ -185,7 +192,7 @@ def revoke(auth):
         raise click.ClickException(response.json()["error"])
 
 
-@cli.command()
+@gd2sqlite.command()
 @click.argument("url")
 @click.option(
     "-a",
@@ -276,7 +283,7 @@ def get(url, auth, paginate, nl, stop_after, verbose):
                 click.echo(line)
 
 
-@cli.command()
+@gd2sqlite.command()
 @click.argument(
     "database",
     type=click.Path(file_okay=True, dir_okay=False, allow_dash=False),
@@ -488,7 +495,7 @@ def load_tokens(auth):
     }
 
 
-@cli.command()
+@gd2sqlite.command()
 @click.argument("file_ids", nargs=-1, required=True)
 @click.option(
     "-a",
@@ -536,7 +543,7 @@ def download(file_ids, auth, output, silent):
             streaming_download(response, file_id, output, silent)
 
 
-@cli.command()
+@gd2sqlite.command()
 @click.argument("format")
 @click.argument("file_ids", nargs=-1, required=True)
 @click.option(
@@ -667,3 +674,5 @@ def stream_indented_json(iterator, indent=2):
     if first:
         # We didn't output anything, so yield the empty list
         yield "[]"
+if __name__ == '__main__':
+    gd2sqlite()
