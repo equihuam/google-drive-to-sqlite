@@ -1,5 +1,5 @@
 from click.testing import CliRunner
-from google_drive_to_sqlite.cli import gd2sqlite, DEFAULT_FIELDS
+from google_drive_to_sqlite.gd2sqlite import gd2sqlite, DEFAULT_FIELDS
 import httpx
 import json
 import pathlib
