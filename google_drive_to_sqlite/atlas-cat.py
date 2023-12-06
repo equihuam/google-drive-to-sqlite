@@ -88,6 +88,16 @@ def start_auth_url(google_client_id, scope):
         }
     )
 
+def load_tokens(authenticated):
+    try:
+        token_info = json.load(open(authenticated))["google-drive-to-sqlite"]
+    except (KeyError, FileNotFoundError):
+        raise click.ClickException("Could not find google-drive-to-sqlite in authenticated.json")
+    return {
+        "refresh_token": token_info["refresh_token"],
+        "client_id": token_info.get("google_client_id", GOOGLE_CLIENT_ID),
+        "client_secret": token_info.get("google_client_secret", GOOGLE_CLIENT_SECRET),
+    }
 
 #@click.group()
 #@click.version_option()
@@ -457,18 +467,6 @@ def files(
     save_files_and_folders(db, all)
 
 
-def load_tokens(authenticated):
-    try:
-        token_info = json.load(open(authenticated))["google-drive-to-sqlite"]
-    except (KeyError, FileNotFoundError):
-        raise click.ClickException("Could not find google-drive-to-sqlite in authenticated.json")
-    return {
-        "refresh_token": token_info["refresh_token"],
-        "client_id": token_info.get("google_client_id", GOOGLE_CLIENT_ID),
-        "client_secret": token_info.get("google_client_secret", GOOGLE_CLIENT_SECRET),
-    }
-
-
 #@gd2sqlite.command()
 #@click.argument("file_ids", nargs=-1, required=True)
 #@click.option(
@@ -661,9 +659,7 @@ if __name__ == '__main__':
     GOOGLE_CLIENT_SECRET = credentials["client_secret"]
     TARGET_FOLDER = credentials["target_folder"]
 
-#    gd2sqlite("authenticated.json")
-#    auth(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, DEFAULT_SCOPE)
-#    tokens = load_tokens("authenticated.json")
+    # If all is ready, this function scans Google Drive Folder and updates de SQLite file
     files("prueba.db", authenticated="authenticated.json", folder=TARGET_FOLDER,
            q="",
            full_text="",
