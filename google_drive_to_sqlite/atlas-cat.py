@@ -1,4 +1,3 @@
-from os import access
 import click
 import httpx
 import itertools
@@ -16,19 +15,6 @@ from utils import (
     save_files_and_folders,
 )
 
-# Información confidencial
-with open("../privado/credenciales.json") as f:
-    credentials = json.load(f)
-with open("../privado/directorio_a_procesar.json") as f:
-    credentials["folder_id"] = json.load(f)
-
-# https://github.com/simonw/google-drive-to-sqlite/issues/2
-GOOGLE_CLIENT_ID = (
-#    "148933860554-98i3hter1bsn24sa6fcq1tcrhcrujrnl.apps.googleusercontent.com"
-"1076851577241-ijb3tbv6f40h1ibmrfkb8bkkjlrvfdh6.apps.googleusercontent.com"
-)
-# It's OK to publish this secret in application source code
-GOOGLE_CLIENT_SECRET = "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"  # "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"
 DEFAULT_SCOPE = "https://www.googleapis.com/auth/drive.readonly"
 
 FORMAT_SHORTCUTS = {
@@ -58,19 +44,6 @@ FILE_EXTENSIONS = {
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xls",
     "application/vnd.openxmlformats-officedocument.presentationml.presentation": "ppt",
 }
-
-
-def start_auth_url(google_client_id, scope):
-    return "https://accounts.google.com/o/oauth2/v2/auth?" + urllib.parse.urlencode(
-        {
-            "access_type": "offline",
-            "client_id": google_client_id,
-            "redirect_uri": "urn:ietf:wg:oauth:2.0:oob",
-            "response_type": "code",
-            "scope": scope,
-        }
-    )
-
 
 DEFAULT_FIELDS = [
     "kind",
@@ -104,25 +77,34 @@ DEFAULT_FIELDS = [
     "linkShareMetadata",
 ]
 
+def start_auth_url(google_client_id, scope):
+    return "https://accounts.google.com/o/oauth2/v2/auth?" + urllib.parse.urlencode(
+        {
+            "access_type": "offline",
+            "client_id": google_client_id,
+            "redirect_uri": "urn:ietf:wg:oauth:2.0:oob",
+            "response_type": "code",
+            "scope": scope,
+        }
+    )
 
-@click.group()
-@click.version_option()
-def gd2sqlite():
-    "Create a SQLite database of metadata from a Google Drive folder"
 
+#@click.group()
+#@click.version_option()
+#def gd2sqlite():
+#    "Create a SQLite database of metadata from a Google Drive folder"
 
-@gd2sqlite.command()
-@click.option(
-    "-a",
-    "--auth",
-    type=click.Path(file_okay=True, dir_okay=False, allow_dash=False),
-    default="auth.json",
-    help="Path to save token, defaults to auth.json",
-)
-@click.option("--google-client-id", help="Custom Google client ID")
-@click.option("--google-client-secret", help="Custom Google client secret")
-@click.option("--scope", help="Custom token scope")
-def auth(auth, google_client_id, google_client_secret, scope):
+#@gd2sqlite.command()
+#@click.option(
+#    "-a",
+#    "--auth",
+#    type=click.Path(file_okay=True, dir_okay=False, allow_dash=False),
+#    default="authenticated.json",
+#    help="Path to save token, defaults to authenticated.json")
+#@click.option("--google-client-id", help="Custom Google client ID")
+#@click.option("--google-client-secret", help="Custom Google client secret")
+#@click.option("--scope", help="Custom token scope")
+def auth(authenticated, google_client_id, google_client_secret, scope):
     "Authenticate user and save credentials"
     if google_client_id is None:
         google_client_id = GOOGLE_CLIENT_ID
@@ -154,7 +136,7 @@ def auth(auth, google_client_id, google_client_secret, scope):
         raise click.ClickException("No refresh_token in response")
     # Read existing file and add refresh_token to it
     try:
-        auth_data = json.load(open(auth))
+        auth_data = json.load(open(authenticated))
     except (ValueError, FileNotFoundError):
         auth_data = {}
     info = {"refresh_token": tokens["refresh_token"]}
@@ -165,22 +147,21 @@ def auth(auth, google_client_id, google_client_secret, scope):
     if scope != DEFAULT_SCOPE:
         info["scope"] = scope
     auth_data["google-drive-to-sqlite"] = info
-    with open(auth, "w") as fp:
+    with open(authenticated, "w") as fp:
         fp.write(json.dumps(auth_data, indent=4))
     # chmod 600 to avoid other users on the shared machine reading it
-    pathlib.Path(auth).chmod(0o600)
+    pathlib.Path(authenticated).chmod(0o600)
 
 
-@gd2sqlite.command()
-@click.option(
-    "-a",
-    "--auth",
-    type=click.Path(file_okay=True, dir_okay=False, allow_dash=False),
-    default="auth.json",
-    help="Path to load token, defaults to auth.json",
-)
+#@gd2sqlite.command()
+#@click.option(
+#    "-a",
+#    "--auth",
+#    type=click.Path(file_okay=True, dir_okay=False, allow_dash=False),
+#    default="authenticated.json",
+#    help="Path to load token, defaults to authenticated.json")
 def revoke(auth):
-    "Revoke the token stored in auth.json"
+    "Revoke the token stored in authenticated.json"
     tokens = load_tokens(auth)
     response = httpx.get(
         "https://accounts.google.com/o/oauth2/revoke",
@@ -192,26 +173,25 @@ def revoke(auth):
         raise click.ClickException(response.json()["error"])
 
 
-@gd2sqlite.command()
-@click.argument("url")
-@click.option(
-    "-a",
-    "--auth",
-    type=click.Path(file_okay=True, dir_okay=False, allow_dash=True),
-    default="auth.json",
-    help="Path to auth.json token file",
-)
-@click.option("--paginate", help="Paginate through all results in this key")
-@click.option(
-    "--nl", is_flag=True, help="Output paginated data as newline-delimited JSON"
-)
-@click.option("--stop-after", type=int, help="Stop paginating after X results")
-@click.option(
-    "-v",
-    "--verbose",
-    is_flag=True,
-    help="Send verbose output to stderr",
-)
+#@gd2sqlite.command()
+#@click.argument("url")
+#@click.option(
+#    "-a",
+#    "--auth",
+#    type=click.Path(file_okay=True, dir_okay=False, allow_dash=True),
+#    default="authenticated.json",
+#    help="Path to authenticated.json token file")
+#@click.option("--paginate", help="Paginate through all results in this key")
+#@click.option(
+#    "--nl", is_flag=True, help="Output paginated data as newline-delimited JSON"
+#)
+#@click.option("--stop-after", type=int, help="Stop paginating after X results")
+#@click.option(
+#    "-v",
+#    "--verbose",
+#    is_flag=True,
+#    help="Send verbose output to stderr",
+#)
 def get(url, auth, paginate, nl, stop_after, verbose):
     "Make an authenticated HTTP GET to the specified URL"
     if not url.startswith("https://www.googleapis.com/"):
@@ -283,62 +263,57 @@ def get(url, auth, paginate, nl, stop_after, verbose):
                 click.echo(line)
 
 
-@gd2sqlite.command()
-@click.argument(
-    "database",
-    type=click.Path(file_okay=True, dir_okay=False, allow_dash=False),
-    required=False,
-)
-@click.option(
-    "-a",
-    "--auth",
-    type=click.Path(file_okay=True, dir_okay=False, allow_dash=True),
-    default="auth.json",
-    help="Path to auth.json token file",
-)
-@click.option("--folder", help="Files in this folder ID and its sub-folders")
-@click.option("-q", help="Files matching this query")
-@click.option("--full-text", help="Search for files with text match")
-@click.option("--starred", is_flag=True, help="Files you have starred")
-@click.option("--trashed", is_flag=True, help="Files in the trash")
-@click.option(
-    "--shared-with-me", is_flag=True, help="Files that have been shared with you"
-)
-@click.option(
-    "--apps",
-    is_flag=True,
-    help="Google Apps docs, spreadsheets, presentations and drawings",
-)
-@click.option("--docs", is_flag=True, help="Google Apps docs")
-@click.option("--sheets", is_flag=True, help="Google Apps spreadsheets")
-@click.option("--presentations", is_flag=True, help="Google Apps presentations")
-@click.option("--drawings", is_flag=True, help="Google Apps drawings")
-@click.option(
-    "json_", "--json", is_flag=True, help="Output JSON rather than write to DB"
-)
-@click.option(
-    "--nl", is_flag=True, help="Output newline-delimited JSON rather than write to DB"
-)
-@click.option("--stop-after", type=int, help="Stop paginating after X results")
-@click.option(
-    "--import-json",
-    type=click.Path(file_okay=True, dir_okay=False, allow_dash=True),
-    help="Import from this JSON file instead of the API",
-)
-@click.option(
-    "--import-nl",
-    type=click.Path(file_okay=True, dir_okay=False, allow_dash=True),
-    help="Import from this newline-delimited JSON file",
-)
-@click.option(
-    "-v",
-    "--verbose",
-    is_flag=True,
-    help="Send verbose output to stderr",
-)
+#@gd2sqlite.command()
+#@click.argument(
+#    "database",
+#    type=click.Path(file_okay=True, dir_okay=False, allow_dash=False),
+#    required=False)
+#@click.option(
+#    "-a",
+#    "--auth",
+#    type=click.Path(file_okay=True, dir_okay=False, allow_dash=True),
+#    default="authenticated.json",
+#    help="Path to authenticated.json token file")
+#@click.option("--folder", help="Files in this folder ID and its sub-folders")
+#@click.option("-q", help="Files matching this query")
+#@click.option("--full-text", help="Search for files with text match")
+#@click.option("--starred", is_flag=True, help="Files you have starred")
+#@click.option("--trashed", is_flag=True, help="Files in the trash")
+#@click.option("--shared-with-me", is_flag=True, help="Files that have been shared with you")
+#@click.option(
+#    "--apps",
+#    is_flag=True,
+#    help="Google Apps docs, spreadsheets, presentations and drawings")
+#@click.option("--docs", is_flag=True, help="Google Apps docs")
+#@click.option("--sheets", is_flag=True, help="Google Apps spreadsheets")
+#@click.option("--presentations", is_flag=True, help="Google Apps presentations")
+#@click.option("--drawings", is_flag=True, help="Google Apps drawings")
+#@click.option(
+#    "json_", "--json", is_flag=True, help="Output JSON rather than write to DB"
+#)
+#@click.option(
+#    "--nl", is_flag=True, help="Output newline-delimited JSON rather than write to DB"
+#)
+#@click.option("--stop-after", type=int, help="Stop paginating after X results")
+#@click.option(
+#    "--import-json",
+#    type=click.Path(file_okay=True, dir_okay=False, allow_dash=True),
+#    help="Import from this JSON file instead of the API",
+#)
+#@click.option(
+#    "--import-nl",
+#    type=click.Path(file_okay=True, dir_okay=False, allow_dash=True),
+#    help="Import from this newline-delimited JSON file",
+#)
+#@click.option(
+#    "-v",
+#    "--verbose",
+#    is_flag=True,
+#    help="Send verbose output to stderr",
+#)
 def files(
     database,
-    auth,
+    authenticated,
     folder,
     q,
     full_text,
@@ -355,8 +330,7 @@ def files(
     stop_after,
     import_json,
     import_nl,
-    verbose,
-):
+    verbose):
     """
     Retrieve metadata for files in Google Drive, and write to a SQLite database
     or output as JSON.
@@ -420,7 +394,7 @@ def files(
 
     client = None
     if not (import_json or import_nl):
-        kwargs = load_tokens(auth)
+        kwargs = load_tokens(authenticated)
         if verbose:
             kwargs["logger"] = lambda s: click.echo(s, err=True)
         client = APIClient(**kwargs)
@@ -483,11 +457,11 @@ def files(
     save_files_and_folders(db, all)
 
 
-def load_tokens(auth):
+def load_tokens(authenticated):
     try:
-        token_info = json.load(open(auth))["google-drive-to-sqlite"]
+        token_info = json.load(open(authenticated))["google-drive-to-sqlite"]
     except (KeyError, FileNotFoundError):
-        raise click.ClickException("Could not find google-drive-to-sqlite in auth.json")
+        raise click.ClickException("Could not find google-drive-to-sqlite in authenticated.json")
     return {
         "refresh_token": token_info["refresh_token"],
         "client_id": token_info.get("google_client_id", GOOGLE_CLIENT_ID),
@@ -495,28 +469,28 @@ def load_tokens(auth):
     }
 
 
-@gd2sqlite.command()
-@click.argument("file_ids", nargs=-1, required=True)
-@click.option(
-    "-a",
-    "--auth",
-    type=click.Path(file_okay=True, dir_okay=False, allow_dash=True),
-    default="auth.json",
-    help="Path to auth.json token file",
-)
-@click.option(
-    "-o",
-    "--output",
-    type=click.Path(file_okay=True, dir_okay=False, allow_dash=True, writable=True),
-    help="File to write to, or - for standard output",
-)
-@click.option(
-    "-s",
-    "--silent",
-    is_flag=True,
-    help="Hide progress bar and filename",
-)
-def download(file_ids, auth, output, silent):
+#@gd2sqlite.command()
+#@click.argument("file_ids", nargs=-1, required=True)
+#@click.option(
+#    "-a",
+#    "--auth",
+#    type=click.Path(file_okay=True, dir_okay=False, allow_dash=True),
+#    default="authenticated.json",
+#    help="Path to authenticated.json token file",
+#)
+#@click.option(
+#    "-o",
+#    "--output",
+#    type=click.Path(file_okay=True, dir_okay=False, allow_dash=True, writable=True),
+#    help="File to write to, or - for standard output",
+#)
+#@click.option(
+#    "-s",
+#    "--silent",
+#    is_flag=True,
+#    help="Hide progress bar and filename",
+#)
+def download(file_ids, authenticated, output, silent):
     """
     Download one or more files to disk, based on their file IDs.
 
@@ -533,7 +507,7 @@ def download(file_ids, auth, output, silent):
     if output:
         if len(file_ids) != 1:
             raise click.ClickException("--output option only works with a single file")
-    tokens = load_tokens(auth)
+    tokens = load_tokens(authenticated)
     client = APIClient(**tokens)
     for file_id in file_ids:
         with client.stream(
@@ -543,29 +517,29 @@ def download(file_ids, auth, output, silent):
             streaming_download(response, file_id, output, silent)
 
 
-@gd2sqlite.command()
-@click.argument("format")
-@click.argument("file_ids", nargs=-1, required=True)
-@click.option(
-    "-a",
-    "--auth",
-    type=click.Path(file_okay=True, dir_okay=False, allow_dash=True),
-    default="auth.json",
-    help="Path to auth.json token file",
-)
-@click.option(
-    "-o",
-    "--output",
-    type=click.Path(file_okay=True, dir_okay=False, allow_dash=True, writable=True),
-    help="File to write to, or - for standard output",
-)
-@click.option(
-    "-s",
-    "--silent",
-    is_flag=True,
-    help="Hide progress bar and filename",
-)
-def export(format, file_ids, auth, output, silent):
+#@gd2sqlite.command()
+#@click.argument("format")
+#@click.argument("file_ids", nargs=-1, required=True)
+#@click.option(
+#    "-a",
+#    "--auth",
+#    type=click.Path(file_okay=True, dir_okay=False, allow_dash=True),
+#    default="authenticated.json",
+#    help="Path to authenticated.json token file",
+#)
+#@click.option(
+#    "-o",
+#    "--output",
+#    type=click.Path(file_okay=True, dir_okay=False, allow_dash=True, writable=True),
+#    help="File to write to, or - for standard output",
+#)
+#@click.option(
+#    "-s",
+#    "--silent",
+#    is_flag=True,
+#    help="Hide progress bar and filename",
+#)
+def export(format, file_ids, authenticated, output, silent):
     """
     Export one or more files to the specified format.
 
@@ -600,7 +574,7 @@ def export(format, file_ids, auth, output, silent):
     if output:
         if len(file_ids) != 1:
             raise click.ClickException("--output option only works with a single file")
-    tokens = load_tokens(auth)
+    tokens = load_tokens(authenticated)
     client = APIClient(**tokens)
     for file_id in file_ids:
         with client.stream(
@@ -674,5 +648,36 @@ def stream_indented_json(iterator, indent=2):
     if first:
         # We didn't output anything, so yield the empty list
         yield "[]"
+
 if __name__ == '__main__':
-    gd2sqlite()
+    # Confidential information
+    with open("../privado/credenciales.json") as f:
+        credentials = json.load(f)
+    credentials = {k: v for k, v in credentials["installed"].items()}
+    with open("../privado/directorio_a_procesar.json") as f:
+        credentials.update(json.load(f))
+
+    GOOGLE_CLIENT_ID = credentials["client_id"]
+    GOOGLE_CLIENT_SECRET = credentials["client_secret"]
+    TARGET_FOLDER = credentials["target_folder"]
+
+#    gd2sqlite("authenticated.json")
+#    auth(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, DEFAULT_SCOPE)
+#    tokens = load_tokens("authenticated.json")
+    files("prueba.db", authenticated="authenticated.json", folder=TARGET_FOLDER,
+           q="",
+           full_text="",
+           starred=False,
+           trashed=False,
+           shared_with_me=False,
+           apps=True,
+           docs=False,
+           sheets=False,
+           presentations=False,
+           drawings=False,
+           json_="",
+           nl="",
+           stop_after=None,
+           import_json=False,
+           import_nl=False,
+           verbose=False)

@@ -45,17 +45,17 @@ def test_auth(httpx_mock, response, expected_error):
             assert result.output.strip().endswith(expected_error)
         else:
             assert result.exit_code == 0
-            auth = json.load(open("auth.json"))
+            auth = json.load(open("authenticated.json"))
             assert auth == {"google-drive-to-sqlite": {"refresh_token": "rtoken"}}
             # Should be chmod 600
-            st_mode = pathlib.Path("auth.json").stat().st_mode
+            st_mode = pathlib.Path("authenticated.json").stat().st_mode
             assert stat.filemode(st_mode) == "-rw-------"
 
 
 @pytest.mark.parametrize(
     "auth_file_exists,revoke_response,expected_error",
     (
-        (False, None, "Error: Could not find google-drive-to-sqlite in auth.json"),
+        (False, None, "Error: Could not find google-drive-to-sqlite in authenticated.json"),
         (True, {}, None),
         (True, {"error": "invalid_token"}, "Error: invalid_token"),
     ),
@@ -64,7 +64,7 @@ def test_revoke(httpx_mock, auth_file_exists, revoke_response, expected_error):
     runner = CliRunner()
     with runner.isolated_filesystem():
         if auth_file_exists:
-            open("auth.json", "w").write(json.dumps(AUTH_JSON))
+            open("authenticated.json", "w").write(json.dumps(AUTH_JSON))
             httpx_mock.add_response(json=revoke_response)
         result = runner.invoke(gd2sqlite, ["revoke"])
         if auth_file_exists:
@@ -107,7 +107,7 @@ def test_auth_custom_client(httpx_mock, opts, expected_content):
     with runner.isolated_filesystem():
         result = runner.invoke(gd2sqlite, ["auth"] + opts, input="my-token")
         assert result.exit_code == 0
-        auth = json.load(open("auth.json"))
+        auth = json.load(open("authenticated.json"))
         assert auth == {"google-drive-to-sqlite": expected_content}
 
 
@@ -128,7 +128,7 @@ def test_get_single(httpx_mock):
     )
     runner = CliRunner()
     with runner.isolated_filesystem():
-        open("auth.json", "w").write(json.dumps(AUTH_JSON))
+        open("authenticated.json", "w").write(json.dumps(AUTH_JSON))
         result = runner.invoke(
             gd2sqlite, ["get", "https://www.googleapis.com/drive/v3/about?fields=*"]
         )
@@ -154,7 +154,7 @@ def test_get_plain_text(httpx_mock):
     )
     runner = CliRunner()
     with runner.isolated_filesystem():
-        open("auth.json", "w").write(json.dumps(AUTH_JSON))
+        open("authenticated.json", "w").write(json.dumps(AUTH_JSON))
         result = runner.invoke(gd2sqlite, ["get", url])
         token_request, export_request = httpx_mock.get_requests()
         assert token_request.content == TOKEN_REQUEST_CONTENT
@@ -194,7 +194,7 @@ def test_get_paginated(httpx_mock, opts, expected_output):
     )
     runner = CliRunner()
     with runner.isolated_filesystem():
-        open("auth.json", "w").write(json.dumps(AUTH_JSON))
+        open("authenticated.json", "w").write(json.dumps(AUTH_JSON))
         result = runner.invoke(
             gd2sqlite,
             ["get", "https://www.googleapis.com/page", "--paginate", "files"] + opts,
@@ -256,7 +256,7 @@ def test_files_basic(httpx_mock, opts, extra_qs, use_db):
     )
     runner = CliRunner()
     with runner.isolated_filesystem():
-        open("auth.json", "w").write(json.dumps(AUTH_JSON))
+        open("authenticated.json", "w").write(json.dumps(AUTH_JSON))
         args = ["files"]
         if use_db:
             args.append("test.db")
@@ -301,7 +301,7 @@ def test_files_basic_stop_after_also_test_verbose(httpx_mock, verbosity_arg):
     )
     runner = CliRunner(mix_stderr=False)
     with runner.isolated_filesystem():
-        open("auth.json", "w").write(json.dumps(AUTH_JSON))
+        open("authenticated.json", "w").write(json.dumps(AUTH_JSON))
         args = ["files", "--json", "--stop-after", "1", verbosity_arg]
         result = runner.invoke(gd2sqlite, args)
         assert (
@@ -352,7 +352,7 @@ def test_files_folder(httpx_mock):
     )
     runner = CliRunner()
     with runner.isolated_filesystem():
-        open("auth.json", "w").write(json.dumps(AUTH_JSON))
+        open("authenticated.json", "w").write(json.dumps(AUTH_JSON))
         args = ["files", "--folder", "folder1", "--json"]
         result = runner.invoke(gd2sqlite, args)
         (
@@ -400,7 +400,7 @@ def test_download_two_files(httpx_mock):
     )
     runner = CliRunner()
     with runner.isolated_filesystem():
-        open("auth.json", "w").write(json.dumps(AUTH_JSON))
+        open("authenticated.json", "w").write(json.dumps(AUTH_JSON))
         result = runner.invoke(gd2sqlite, ["download", "file1", "file2"])
         assert result.exit_code == 0
         # Should be file1.plain and file2.gif
@@ -433,7 +433,7 @@ def test_download_output_stdout(httpx_mock):
     )
     runner = CliRunner()
     with runner.isolated_filesystem():
-        open("auth.json", "w").write(json.dumps(AUTH_JSON))
+        open("authenticated.json", "w").write(json.dumps(AUTH_JSON))
         result = runner.invoke(gd2sqlite, ["download", "file1", "-o", "-"])
         assert result.exit_code == 0
         assert result.output == "this is text"
@@ -450,7 +450,7 @@ def test_download_output_path(httpx_mock):
     )
     runner = CliRunner()
     with runner.isolated_filesystem():
-        open("auth.json", "w").write(json.dumps(AUTH_JSON))
+        open("authenticated.json", "w").write(json.dumps(AUTH_JSON))
         result = runner.invoke(gd2sqlite, ["download", "file1", "-o", "out.txt"])
         assert result.exit_code == 0
         assert open("out.txt").read() == "this is text"
@@ -471,7 +471,7 @@ def test_export_two_files(httpx_mock):
     )
     runner = CliRunner()
     with runner.isolated_filesystem():
-        open("auth.json", "w").write(json.dumps(AUTH_JSON))
+        open("authenticated.json", "w").write(json.dumps(AUTH_JSON))
         result = runner.invoke(gd2sqlite, ["export", "pdf", "file1", "file2"])
         assert result.exit_code == 0
         assert open("file1-export.pdf").read() == "this is pdf"
@@ -526,7 +526,7 @@ def test_refresh_access_token_once_if_it_expires(httpx_mock):
     )
     runner = CliRunner()
     with runner.isolated_filesystem():
-        open("auth.json", "w").write(json.dumps(AUTH_JSON))
+        open("authenticated.json", "w").write(json.dumps(AUTH_JSON))
         result = runner.invoke(
             gd2sqlite, ["get", "https://www.googleapis.com/drive/v3/about?fields=*"]
         )
@@ -802,7 +802,7 @@ def test_files_retry_on_transport_error(
 
     runner = CliRunner(mix_stderr=False)
     with runner.isolated_filesystem():
-        open("auth.json", "w").write(json.dumps(AUTH_JSON))
+        open("authenticated.json", "w").write(json.dumps(AUTH_JSON))
         result = runner.invoke(
             gd2sqlite, ["get", "https://www.googleapis.com/drive/v3/about?fields=*", "-v"]
         )

@@ -16,10 +16,10 @@ from utils import (
     save_files_and_folders,
 )
 
-# Información confidencial
+# Confidential information
 with open("../privado/credenciales.json") as f:
     credentials = json.load(f)
-credentials = credentials = {k:v for k,v in credentials["installed"].items()}
+credentials = {k:v for k,v in credentials["installed"].items()}
 with open("../privado/directorio_a_procesar.json") as f:
     credentials.update(json.load(f))
 
@@ -118,8 +118,8 @@ def gd2sqlite():
 @click.option("-a",
               "--auth",
               type=click.Path(file_okay=True, dir_okay=False, allow_dash=False),
-              default="auth.json",
-              help="Path to save token, defaults to auth.json")
+              default="authenticated.json",
+              help="Path to save token, defaults to authenticated.json")
 @click.option("--google-client-id", help="Custom Google client ID")
 @click.option("--google-client-secret", help="Custom Google client secret")
 @click.option("--scope", help="Custom token scope")
@@ -177,11 +177,11 @@ def auth(auth, google_client_id, google_client_secret, scope):
     "-a",
     "--auth",
     type=click.Path(file_okay=True, dir_okay=False, allow_dash=False),
-    default="auth.json",
-    help="Path to load token, defaults to auth.json",
+    default="authenticated.json",
+    help="Path to load token, defaults to authenticated.json",
 )
 def revoke(auth):
-    "Revoke the token stored in auth.json"
+    "Revoke the token stored in authenticated.json"
     tokens = load_tokens(auth)
     response = httpx.get(
         "https://accounts.google.com/o/oauth2/revoke",
@@ -199,8 +199,8 @@ def revoke(auth):
     "-a",
     "--auth",
     type=click.Path(file_okay=True, dir_okay=False, allow_dash=True),
-    default="auth.json",
-    help="Path to auth.json token file",
+    default="authenticated.json",
+    help="Path to authenticated.json token file",
 )
 @click.option("--paginate", help="Paginate through all results in this key")
 @click.option(
@@ -294,8 +294,8 @@ def get(url, auth, paginate, nl, stop_after, verbose):
     "-a",
     "--auth",
     type=click.Path(file_okay=True, dir_okay=False, allow_dash=True),
-    default="auth.json",
-    help="Path to auth.json token file",
+    default="authenticated.json",
+    help="Path to authenticated.json token file",
 )
 @click.option("--folder", help="Files in this folder ID and its sub-folders")
 @click.option("-q", help="Files matching this query")
@@ -488,7 +488,7 @@ def load_tokens(auth):
     try:
         token_info = json.load(open(auth))["google-drive-to-sqlite"]
     except (KeyError, FileNotFoundError):
-        raise click.ClickException("Could not find google-drive-to-sqlite in auth.json")
+        raise click.ClickException("Could not find google-drive-to-sqlite in authenticated.json")
     return {
         "refresh_token": token_info["refresh_token"],
         "client_id": token_info.get("google_client_id", GOOGLE_CLIENT_ID),
@@ -502,8 +502,8 @@ def load_tokens(auth):
     "-a",
     "--auth",
     type=click.Path(file_okay=True, dir_okay=False, allow_dash=True),
-    default="auth.json",
-    help="Path to auth.json token file",
+    default="authenticated.json",
+    help="Path to authenticated.json token file",
 )
 @click.option(
     "-o",
@@ -551,8 +551,8 @@ def download(file_ids, auth, output, silent):
     "-a",
     "--auth",
     type=click.Path(file_okay=True, dir_okay=False, allow_dash=True),
-    default="auth.json",
-    help="Path to auth.json token file",
+    default="authenticated.json",
+    help="Path to authenticated.json token file",
 )
 @click.option(
     "-o",
