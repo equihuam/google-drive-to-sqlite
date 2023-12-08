@@ -150,6 +150,7 @@ def save_files_and_folders(db, all):
     with db.conn:
         if not db["drive_users"].exists():
             db["drive_users"].create({"permissionId": str}, pk="permissionId")
+
         for table in ("drive_folders", "drive_files"):
             if not db[table].exists():
                 db[table].create(
@@ -157,19 +158,29 @@ def save_files_and_folders(db, all):
                         "id": str,
                         "_parent": str,
                         "_owner": str,
-                        "lastModifyingUser": str,
+                        "lastModifyingUser": str
                     },
-                    pk="id",
-                )
+                        pk="id")
+
                 # Gotta add foreign key after table is created, to avoid
                 # AlterError: No such column: drive_folders.id
                 db.add_foreign_keys(
                     (
                         (table, "_parent", "drive_folders", "id"),
                         (table, "_owner", "drive_users", "permissionId"),
-                        (table, "lastModifyingUser", "drive_users", "permissionId"),
+                        (table, "lastModifyingUser", "drive_users", "permissionId")
                     )
                 )
+
+        if not db["tema_doc"].exists():
+            db["tema_doc"].create({"id_doc": str, "id_tema": int}, pk=("id_doc", "id_tema"))
+            db.add_foreign_keys(("tema_doc", "id_doc", "drive_files", "id"))
+            print("sí lo hice")
+
+        if not db["conceptos"].exists():
+            db["conceptos"].create({"tema": str, "concepto": str, "id_tema": int, "id": int},
+                                    pk="id")
+#            db.add_foreign_keys(("tema_doc", "id_doc", "drive_files", "id"))
 
     # Commit every 100 records
     users_seen = set()
@@ -235,12 +246,9 @@ def save_files_and_folders(db, all):
             )
             if drive_folders_owners_to_insert:
                 db["drive_folders_owners"].insert_all(
-                    drive_folders_owners_to_insert, replace=True
-                )
+                    drive_folders_owners_to_insert, replace=True)
             if drive_files_owners_to_insert:
-                db["drive_files_owners"].insert_all(
-                    drive_files_owners_to_insert, replace=True
-                )
+                db["drive_files_owners"].insert_all(drive_files_owners_to_insert, replace=True)
 
 
 def chunks(sequence, size):

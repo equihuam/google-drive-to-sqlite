@@ -428,8 +428,8 @@ def files(
     else:
         if folder:
             all_in_folder = files_in_folder_recursive(
-                client, folder, fields=DEFAULT_FIELDS
-            )
+                client, folder, fields=DEFAULT_FIELDS)
+
             # Fetch details of that folder first
             folder_details = get_file(client, folder, fields=DEFAULT_FIELDS)
 
@@ -649,10 +649,10 @@ def stream_indented_json(iterator, indent=2):
 
 if __name__ == '__main__':
     # Confidential information
-    with open("../privado/credenciales.json") as f:
+    with open("privado/credenciales.json") as f:
         credentials = json.load(f)
     credentials = {k: v for k, v in credentials["installed"].items()}
-    with open("../privado/directorio_a_procesar.json") as f:
+    with open("privado/directorio_a_procesar.json") as f:
         credentials.update(json.load(f))
 
     GOOGLE_CLIENT_ID = credentials["client_id"]
