@@ -9,3 +9,5 @@ venv
 .DS_Store
 auth.json
 privado
+/google_drive_to_sqlite/prueba.db
+/google_drive_to_sqlite/authenticated.json
