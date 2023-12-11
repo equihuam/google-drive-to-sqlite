@@ -1,13 +1,14 @@
 import click
 import httpx
-import itertools
+# import itertools
 import json
 import pathlib
 import sqlite_utils
 import sys
-import textwrap
+# import textwrap
 import urllib.parse
 from GD_upload_update_file import upload_db_file
+from google_drive_to_sqlite.gd2sqlite import stream_indented_json
 from atlas_utils import (
     APIClient,
     get_file,
@@ -74,8 +75,8 @@ DEFAULT_FIELDS = [
     "folderColorRgb",
     "quotaBytesUsed",
     "isAppAuthorized",
-    "linkShareMetadata",
-]
+    "linkShareMetadata"]
+
 
 def start_auth_url(google_client_id, scope):
     return "https://accounts.google.com/o/oauth2/v2/auth?" + urllib.parse.urlencode(
@@ -88,6 +89,7 @@ def start_auth_url(google_client_id, scope):
         }
     )
 
+
 def load_tokens(authenticated):
     try:
         token_info = json.load(open(authenticated))["google-drive-to-sqlite"]
@@ -99,8 +101,9 @@ def load_tokens(authenticated):
         "client_secret": token_info.get("google_client_secret", GOOGLE_CLIENT_SECRET),
     }
 
+
 def auth(authenticated, google_client_id, google_client_secret, scope):
-    "Authenticate user and save credentials"
+    """Authenticate user and save credentials"""
     if google_client_id is None:
         google_client_id = GOOGLE_CLIENT_ID
     if google_client_secret is None:
@@ -114,14 +117,12 @@ def auth(authenticated, google_client_id, google_client_secret, scope):
     click.echo("Then return here and paste in the resulting code:")
     copied_code = click.prompt("Paste code here", hide_input=True)
     response = httpx.post("https://www.googleapis.com/oauth2/v4/token",
-        data={
-            "code": copied_code,
-            "client_id": google_client_id,
-            "client_secret": google_client_secret,
-            "redirect_uri": "urn:ietf:wg:oauth:2.0:oob",
-            "grant_type": "authorization_code",
-        },
-    )
+                          data={"code": copied_code,
+                                "client_id": google_client_id,
+                                "client_secret": google_client_secret,
+                                "redirect_uri": "urn:ietf:wg:oauth:2.0:oob",
+                                "grant_type": "authorization_code"}
+                          )
     tokens = response.json()
     if "error" in tokens:
         message = "{error}: {error_description}".format(**tokens)
@@ -147,9 +148,9 @@ def auth(authenticated, google_client_id, google_client_secret, scope):
     pathlib.Path(authenticated).chmod(0o600)
 
 
-def revoke(auth):
-    "Revoke the token stored in authenticated.json"
-    tokens = load_tokens(auth)
+def revoke(authenticated):
+    """Revoke the token stored in authenticated.json"""
+    tokens = load_tokens(authenticated)
     response = httpx.get(
         "https://accounts.google.com/o/oauth2/revoke",
         params={
@@ -160,8 +161,8 @@ def revoke(auth):
         raise click.ClickException(response.json()["error"])
 
 
-def get(url, auth, paginate, nl, stop_after, verbose):
-    "Make an authenticated HTTP GET to the specified URL"
+def get(url, authenticated, paginate, nl, stop_after, verbose):
+    """Make an authenticated HTTP GET to the specified URL"""
     if not url.startswith("https://www.googleapis.com/"):
         if url.startswith("/"):
             url = "https://www.googleapis.com" + url
@@ -170,7 +171,7 @@ def get(url, auth, paginate, nl, stop_after, verbose):
                 "url must start with / or https://www.googleapis.com/"
             )
 
-    kwargs = load_tokens(auth)
+    kwargs = load_tokens(authenticated)
     if verbose:
         kwargs["logger"] = lambda s: click.echo(s, err=True)
     client = APIClient(**kwargs)
@@ -198,12 +199,12 @@ def get(url, auth, paginate, nl, stop_after, verbose):
                 params = {}
                 if next_page_token is not None:
                     params["pageToken"] = next_page_token
-                response = client.get(
+                response_i = client.get(
                     url,
                     params=params,
                 )
-                data = response.json()
-                if response.status_code != 200:
+                data = response_i.json()
+                if response_i.status_code != 200:
                     raise click.ClickException(json.dumps(data, indent=4))
                 # Paginate using the specified key and nextPageToken
                 if paginate not in data:
@@ -212,8 +213,8 @@ def get(url, auth, paginate, nl, stop_after, verbose):
                             repr(paginate), repr(list(data.keys()))
                         )
                     )
-                for item in data[paginate]:
-                    yield item
+                for item_1 in data[paginate]:
+                    yield item_1
                     i += 1
                     if stop_after is not None and i >= stop_after:
                         return
@@ -230,26 +231,25 @@ def get(url, auth, paginate, nl, stop_after, verbose):
                 click.echo(line)
 
 
-def files(
-    database,
-    authenticated,
-    folder,
-    q,
-    full_text,
-    starred,
-    trashed,
-    shared_with_me,
-    apps,
-    docs,
-    sheets,
-    presentations,
-    drawings,
-    json_,
-    nl,
-    stop_after,
-    import_json,
-    import_nl,
-    verbose):
+def files(database,
+          authenticated,
+          folder,
+          q,
+          full_text,
+          starred,
+          trashed,
+          shared_with_me,
+          apps,
+          docs,
+          sheets,
+          presentations,
+          drawings,
+          json_,
+          nl,
+          stop_after,
+          import_json,
+          import_nl,
+          verbose):
     """
     Retrieve metadata for files in Google Drive, and write to a SQLite database
     or output as JSON.
@@ -324,16 +324,16 @@ def files(
         else:
             fp = open(import_json or import_nl)
         if import_json:
-            all = json.load(fp)
+            all_1 = json.load(fp)
         else:
 
             def _nl():
-                for line in fp:
-                    line = line.strip()
-                    if line:
-                        yield json.loads(line)
+                for line_f in fp:
+                    line_f = line_f.strip()
+                    if line_f:
+                        yield json.loads(line_f)
 
-            all = _nl()
+            all_1 = _nl()
     else:
         if folder:
             all_in_folder = files_in_folder_recursive(
@@ -346,34 +346,34 @@ def files(
                 yield folder_details
                 yield from all_in_folder
 
-            all = folder_details_then_all()
+            all_1 = folder_details_then_all()
         else:
-            all = paginate_files(client, q=q, fields=DEFAULT_FIELDS)
+            all_1 = paginate_files(client, q=q, fields=DEFAULT_FIELDS)
 
     if stop_after:
-        prev_all = all
+        prev_all = all_1
 
         def stop_after_all():
             i = 0
-            for file in prev_all:
-                yield file
+            for file_p in prev_all:
+                yield file_p
                 i += 1
                 if i >= stop_after:
                     break
 
-        all = stop_after_all()
+        all_1 = stop_after_all()
 
     if nl:
-        for file in all:
+        for file in all_1:
             click.echo(json.dumps(file))
         return
     if json_:
-        for line in stream_indented_json(all):
+        for line in stream_indented_json(all_1):
             click.echo(line)
         return
 
     db = sqlite_utils.Database(database)
-    save_files_and_folders(db, all)
+    save_files_and_folders(db, all_1)
 
 
 if __name__ == '__main__':
@@ -391,26 +391,25 @@ if __name__ == '__main__':
     TARGET_FOLDER = credentials["target_folder"]
     CONTROL_FOLDER = credentials["control_folder"]
 
-    #auth("authenticated.json", GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, DEFAULT_SCOPE)
+    # auth("authenticated.json", GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, DEFAULT_SCOPE)
 
     # If all is ready, this function scans Google Drive Folder and updates de SQLite file
     files("atlas-y-cat.db", authenticated="authenticated.json", folder=TARGET_FOLDER,
-           q="",
-           full_text="",
-           starred=False,
-           trashed=False,
-           shared_with_me=False,
-           apps=True,
-           docs=False,
-           sheets=False,
-           presentations=False,
-           drawings=False,
-           json_="",
-           nl="",
-           stop_after=None,
-           import_json=False,
-           import_nl=False,
-           verbose=False)
+          q="",
+          full_text="",
+          starred=False,
+          trashed=False,
+          shared_with_me=False,
+          apps=True,
+          docs=False,
+          sheets=False,
+          presentations=False,
+          drawings=False,
+          json_="",
+          nl="",
+          stop_after=None,
+          import_json=False,
+          import_nl=False,
+          verbose=False)
 
     upload_db_file(CONTROL_FOLDER)
-
