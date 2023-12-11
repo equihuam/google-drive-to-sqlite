@@ -7,15 +7,14 @@ import sqlite_utils
 import sys
 import textwrap
 import urllib.parse
-from utils import (
+from GD_upload_update_file import upload_db_file
+from atlas_utils import (
     APIClient,
     get_file,
     files_in_folder_recursive,
     paginate_files,
     save_files_and_folders,
 )
-
-DEFAULT_SCOPE = "https://www.googleapis.com/auth/drive.readonly"
 
 FORMAT_SHORTCUTS = {
     "html": "text/html",
@@ -33,6 +32,7 @@ FORMAT_SHORTCUTS = {
     "png": "image/png",
     "svg": "image/svg+xml",
 }
+
 # .ext defaults to the bit after the / - e.g. "application/pdf" becomes "pdf",
 # unless there is an explicit override here:
 FILE_EXTENSIONS = {
@@ -99,21 +99,6 @@ def load_tokens(authenticated):
         "client_secret": token_info.get("google_client_secret", GOOGLE_CLIENT_SECRET),
     }
 
-#@click.group()
-#@click.version_option()
-#def gd2sqlite():
-#    "Create a SQLite database of metadata from a Google Drive folder"
-
-#@gd2sqlite.command()
-#@click.option(
-#    "-a",
-#    "--auth",
-#    type=click.Path(file_okay=True, dir_okay=False, allow_dash=False),
-#    default="authenticated.json",
-#    help="Path to save token, defaults to authenticated.json")
-#@click.option("--google-client-id", help="Custom Google client ID")
-#@click.option("--google-client-secret", help="Custom Google client secret")
-#@click.option("--scope", help="Custom token scope")
 def auth(authenticated, google_client_id, google_client_secret, scope):
     "Authenticate user and save credentials"
     if google_client_id is None:
@@ -128,8 +113,7 @@ def auth(authenticated, google_client_id, google_client_secret, scope):
     click.echo("")
     click.echo("Then return here and paste in the resulting code:")
     copied_code = click.prompt("Paste code here", hide_input=True)
-    response = httpx.post(
-        "https://www.googleapis.com/oauth2/v4/token",
+    response = httpx.post("https://www.googleapis.com/oauth2/v4/token",
         data={
             "code": copied_code,
             "client_id": google_client_id,
@@ -163,13 +147,6 @@ def auth(authenticated, google_client_id, google_client_secret, scope):
     pathlib.Path(authenticated).chmod(0o600)
 
 
-#@gd2sqlite.command()
-#@click.option(
-#    "-a",
-#    "--auth",
-#    type=click.Path(file_okay=True, dir_okay=False, allow_dash=False),
-#    default="authenticated.json",
-#    help="Path to load token, defaults to authenticated.json")
 def revoke(auth):
     "Revoke the token stored in authenticated.json"
     tokens = load_tokens(auth)
@@ -183,25 +160,6 @@ def revoke(auth):
         raise click.ClickException(response.json()["error"])
 
 
-#@gd2sqlite.command()
-#@click.argument("url")
-#@click.option(
-#    "-a",
-#    "--auth",
-#    type=click.Path(file_okay=True, dir_okay=False, allow_dash=True),
-#    default="authenticated.json",
-#    help="Path to authenticated.json token file")
-#@click.option("--paginate", help="Paginate through all results in this key")
-#@click.option(
-#    "--nl", is_flag=True, help="Output paginated data as newline-delimited JSON"
-#)
-#@click.option("--stop-after", type=int, help="Stop paginating after X results")
-#@click.option(
-#    "-v",
-#    "--verbose",
-#    is_flag=True,
-#    help="Send verbose output to stderr",
-#)
 def get(url, auth, paginate, nl, stop_after, verbose):
     "Make an authenticated HTTP GET to the specified URL"
     if not url.startswith("https://www.googleapis.com/"):
@@ -233,7 +191,6 @@ def get(url, auth, paginate, nl, stop_after, verbose):
             click.echo(response.text)
 
     else:
-
         def paginate_all():
             i = 0
             next_page_token = None
@@ -273,54 +230,6 @@ def get(url, auth, paginate, nl, stop_after, verbose):
                 click.echo(line)
 
 
-#@gd2sqlite.command()
-#@click.argument(
-#    "database",
-#    type=click.Path(file_okay=True, dir_okay=False, allow_dash=False),
-#    required=False)
-#@click.option(
-#    "-a",
-#    "--auth",
-#    type=click.Path(file_okay=True, dir_okay=False, allow_dash=True),
-#    default="authenticated.json",
-#    help="Path to authenticated.json token file")
-#@click.option("--folder", help="Files in this folder ID and its sub-folders")
-#@click.option("-q", help="Files matching this query")
-#@click.option("--full-text", help="Search for files with text match")
-#@click.option("--starred", is_flag=True, help="Files you have starred")
-#@click.option("--trashed", is_flag=True, help="Files in the trash")
-#@click.option("--shared-with-me", is_flag=True, help="Files that have been shared with you")
-#@click.option(
-#    "--apps",
-#    is_flag=True,
-#    help="Google Apps docs, spreadsheets, presentations and drawings")
-#@click.option("--docs", is_flag=True, help="Google Apps docs")
-#@click.option("--sheets", is_flag=True, help="Google Apps spreadsheets")
-#@click.option("--presentations", is_flag=True, help="Google Apps presentations")
-#@click.option("--drawings", is_flag=True, help="Google Apps drawings")
-#@click.option(
-#    "json_", "--json", is_flag=True, help="Output JSON rather than write to DB"
-#)
-#@click.option(
-#    "--nl", is_flag=True, help="Output newline-delimited JSON rather than write to DB"
-#)
-#@click.option("--stop-after", type=int, help="Stop paginating after X results")
-#@click.option(
-#    "--import-json",
-#    type=click.Path(file_okay=True, dir_okay=False, allow_dash=True),
-#    help="Import from this JSON file instead of the API",
-#)
-#@click.option(
-#    "--import-nl",
-#    type=click.Path(file_okay=True, dir_okay=False, allow_dash=True),
-#    help="Import from this newline-delimited JSON file",
-#)
-#@click.option(
-#    "-v",
-#    "--verbose",
-#    is_flag=True,
-#    help="Send verbose output to stderr",
-#)
 def files(
     database,
     authenticated,
@@ -467,187 +376,8 @@ def files(
     save_files_and_folders(db, all)
 
 
-#@gd2sqlite.command()
-#@click.argument("file_ids", nargs=-1, required=True)
-#@click.option(
-#    "-a",
-#    "--auth",
-#    type=click.Path(file_okay=True, dir_okay=False, allow_dash=True),
-#    default="authenticated.json",
-#    help="Path to authenticated.json token file",
-#)
-#@click.option(
-#    "-o",
-#    "--output",
-#    type=click.Path(file_okay=True, dir_okay=False, allow_dash=True, writable=True),
-#    help="File to write to, or - for standard output",
-#)
-#@click.option(
-#    "-s",
-#    "--silent",
-#    is_flag=True,
-#    help="Hide progress bar and filename",
-#)
-def download(file_ids, authenticated, output, silent):
-    """
-    Download one or more files to disk, based on their file IDs.
-
-    The file content will be saved to a file with the name:
-
-        FILE_ID.ext
-
-    Where the extension is automatically picked based on the type of file.
-
-    If you are downloading a single file you can specify a filename with -o:
-
-        google-drive-to-sqlite download MY_FILE_ID -o myfile.txt
-    """
-    if output:
-        if len(file_ids) != 1:
-            raise click.ClickException("--output option only works with a single file")
-    tokens = load_tokens(authenticated)
-    client = APIClient(**tokens)
-    for file_id in file_ids:
-        with client.stream(
-            "GET",
-            "https://www.googleapis.com/drive/v3/files/{}?alt=media".format(file_id),
-        ) as response:
-            streaming_download(response, file_id, output, silent)
-
-
-#@gd2sqlite.command()
-#@click.argument("format")
-#@click.argument("file_ids", nargs=-1, required=True)
-#@click.option(
-#    "-a",
-#    "--auth",
-#    type=click.Path(file_okay=True, dir_okay=False, allow_dash=True),
-#    default="authenticated.json",
-#    help="Path to authenticated.json token file",
-#)
-#@click.option(
-#    "-o",
-#    "--output",
-#    type=click.Path(file_okay=True, dir_okay=False, allow_dash=True, writable=True),
-#    help="File to write to, or - for standard output",
-#)
-#@click.option(
-#    "-s",
-#    "--silent",
-#    is_flag=True,
-#    help="Hide progress bar and filename",
-#)
-def export(format, file_ids, authenticated, output, silent):
-    """
-    Export one or more files to the specified format.
-
-    Usage:
-
-        google-drive-to-sqlite export pdf FILE_ID_1 FILE_ID_2
-
-    The file content will be saved to a file with the name:
-
-        FILE_ID-export.ext
-
-    Where the extension is based on the format you specified.
-
-    Available export formats can be seen here:
-    https://developers.google.com/drive/api/v3/ref-export-formats
-
-    Or you can use one of the following shortcuts:
-
-    \b
-    - Google Docs: html, txt, rtf, pdf, doc, zip, epub
-    - Google Sheets: xls, pdf, csv, tsv, zip
-    - Presentations: ppt, pdf, txt
-    - Drawings: jpeg, png, svg
-
-    "zip" returns a zip file of HTML.
-
-    If you are exporting a single file you can specify a filename with -o:
-
-        google-drive-to-sqlite export zip MY_FILE_ID -o myfile.zip
-    """
-    format = FORMAT_SHORTCUTS.get(format, format)
-    if output:
-        if len(file_ids) != 1:
-            raise click.ClickException("--output option only works with a single file")
-    tokens = load_tokens(authenticated)
-    client = APIClient(**tokens)
-    for file_id in file_ids:
-        with client.stream(
-            "GET",
-            "https://www.googleapis.com/drive/v3/files/{}/export".format(file_id),
-            params={"mimeType": format},
-        ) as response:
-            filestem = "{}-export".format(file_id)
-            streaming_download(response, filestem, output, silent)
-
-
-def streaming_download(response, filestem, output, silent):
-    if response.status_code != 200:
-        raise click.ClickException(response.read().decode("utf-8"))
-    fp = None
-    if output:
-        filename = pathlib.Path(output).name
-        if output == "-":
-            fp = sys.stdout.buffer
-            silent = True
-        else:
-            fp = open(output, "wb")
-    else:
-        ext = response.headers.get("content-type", "/bin")
-        if ext in FILE_EXTENSIONS:
-            ext = FILE_EXTENSIONS[ext]
-        else:
-            ext = ext.split("/")[-1]
-        filename = "{}.{}".format(filestem, ext)
-        fp = open(filename, "wb")
-    length = int(response.headers.get("content-length", "0"))
-    if not silent:
-        click.echo(
-            "Writing {}to {}".format(
-                "{:,} bytes ".format(length) if length else "", filename
-            ),
-            err=True,
-        )
-    if length and not silent:
-        with click.progressbar(
-            length=int(response.headers["content-length"]), label="Downloading"
-        ) as bar:
-            for data in response.iter_bytes():
-                fp.write(data)
-                bar.update(len(data))
-    else:
-        for data in response.iter_bytes():
-            fp.write(data)
-
-
-def stream_indented_json(iterator, indent=2):
-    # We have to iterate two-at-a-time so we can know if we
-    # should output a trailing comma or if we have reached
-    # the last item.
-    current_iter, next_iter = itertools.tee(iterator, 2)
-    next(next_iter, None)
-    first = True
-    for item, next_item in itertools.zip_longest(current_iter, next_iter):
-        is_last = next_item is None
-        data = item
-        line = "{first}{serialized}{separator}{last}".format(
-            first="[\n" if first else "",
-            serialized=textwrap.indent(
-                json.dumps(data, indent=indent, default=repr), " " * indent
-            ),
-            separator="," if not is_last else "",
-            last="\n]" if is_last else "",
-        )
-        yield line
-        first = False
-    if first:
-        # We didn't output anything, so yield the empty list
-        yield "[]"
-
 if __name__ == '__main__':
+
     # Confidential information
     with open("privado/credenciales.json") as f:
         credentials = json.load(f)
@@ -655,12 +385,16 @@ if __name__ == '__main__':
     with open("privado/directorio_a_procesar.json") as f:
         credentials.update(json.load(f))
 
+    DEFAULT_SCOPE = "https://www.googleapis.com/auth/drive.readonly"
     GOOGLE_CLIENT_ID = credentials["client_id"]
     GOOGLE_CLIENT_SECRET = credentials["client_secret"]
     TARGET_FOLDER = credentials["target_folder"]
+    CONTROL_FOLDER = credentials["control_folder"]
+
+    #auth("authenticated.json", GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, DEFAULT_SCOPE)
 
     # If all is ready, this function scans Google Drive Folder and updates de SQLite file
-    files("prueba.db", authenticated="authenticated.json", folder=TARGET_FOLDER,
+    files("atlas-y-cat.db", authenticated="authenticated.json", folder=TARGET_FOLDER,
            q="",
            full_text="",
            starred=False,
@@ -677,3 +411,6 @@ if __name__ == '__main__':
            import_json=False,
            import_nl=False,
            verbose=False)
+
+    upload_db_file(CONTROL_FOLDER)
+
