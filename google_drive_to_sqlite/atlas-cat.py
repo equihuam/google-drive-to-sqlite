@@ -8,7 +8,7 @@ import sys
 # import textwrap
 import urllib.parse
 from GD_upload_update_file import upload_db_file
-from google_drive_to_sqlite.gd2sqlite import stream_indented_json
+from gd2sqlite import stream_indented_json
 from atlas_utils import (
     APIClient,
     get_file,
@@ -391,7 +391,7 @@ if __name__ == '__main__':
     TARGET_FOLDER = credentials["target_folder"]
     CONTROL_FOLDER = credentials["control_folder"]
 
-    # auth("authenticated.json", GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, DEFAULT_SCOPE)
+    #auth("authenticated.json", GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, DEFAULT_SCOPE)
 
     # If all is ready, this function scans Google Drive Folder and updates de SQLite file
     files("atlas-y-cat.db", authenticated="authenticated.json", folder=TARGET_FOLDER,
