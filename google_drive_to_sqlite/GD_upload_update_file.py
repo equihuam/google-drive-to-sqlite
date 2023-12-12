@@ -24,8 +24,8 @@ def upload_db_file(control_folder):
   # The file credenciales.json stores the user's access and refresh tokens, and is
   # created automatically when the authorization flow completes for the first
   # time.
-  if os.path.exists("token.json"):
-      creds = Credentials.from_authorized_user_file("token.json", SCOPE)
+  if os.path.exists("privado/token.json"):
+      creds = Credentials.from_authorized_user_file("privado/token.json", SCOPE)
   # If there are no (valid) credentials available, let the user log in.
   if not creds or not creds.valid:
       if creds and creds.expired and creds.refresh_token:
@@ -36,7 +36,7 @@ def upload_db_file(control_folder):
           )
           creds = flow.run_local_server(port=0)
       # Save the credentials for the next run
-      with open("token.json", "w") as token:
+      with open("privado/token.json", "w") as token:
           token.write(creds.to_json())
 
   try:
