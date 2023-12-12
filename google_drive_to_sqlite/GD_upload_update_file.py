@@ -1,3 +1,8 @@
+
+"""
+Needs the following libraries for google drive interaction:
+google-api-python-client google-auth-httplib2 google-auth-oauthlib
+"""
 import json
 import os.path
 from google.auth.transport.requests import Request
@@ -8,7 +13,8 @@ from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload
 
 def upload_db_file(control_folder):
-  """Insert new file.
+  """
+  Insert new file.
   Returns : Id's of the file uploaded
 
   Load pre-authorized user credentials from the environment.

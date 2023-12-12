@@ -391,10 +391,10 @@ if __name__ == '__main__':
     TARGET_FOLDER = credentials["target_folder"]
     CONTROL_FOLDER = credentials["control_folder"]
 
-    # auth("authenticated.json", GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, DEFAULT_SCOPE)
+    #auth("privado/authenticated.json", GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, DEFAULT_SCOPE)
 
     # If all is ready, this function scans Google Drive Folder and updates de SQLite file
-    files("atlas-y-cat.db", authenticated="authenticated.json", folder=TARGET_FOLDER,
+    files("atlas-y-cat.db", authenticated="privado/authenticated.json", folder=TARGET_FOLDER,
           q="",
           full_text="",
           starred=False,
