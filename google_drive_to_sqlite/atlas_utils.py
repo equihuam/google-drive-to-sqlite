@@ -179,7 +179,7 @@ def save_files_and_folders(db, all):
 
         if not db["temas_doc"].exists():
             db["temas_doc"].create({"id_doc": str, "id_tema": int}, pk=("id_doc", "id_tema"))
-            db.add_foreign_keys([("temas_doc", "id_doc", "drive_folders", "id"),
+            db.add_foreign_keys([("temas_doc", "id_doc", "drive_files", "id"),
                                  ("temas_doc", "id_tema", "conceptos", "id")])
 
     # Commit every 100 records
