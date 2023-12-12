@@ -17,10 +17,10 @@ from utils import (
 )
 
 # Confidential information
-with open("../privado/credenciales.json") as f:
+with open("privado/credenciales.json") as f:
     credentials = json.load(f)
 credentials = {k:v for k,v in credentials["installed"].items()}
-with open("../privado/directorio_a_procesar.json") as f:
+with open("privado/directorio_a_procesar.json") as f:
     credentials.update(json.load(f))
 
 # https://github.com/simonw/google-drive-to-sqlite/issues/2

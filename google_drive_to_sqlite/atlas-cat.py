@@ -8,7 +8,7 @@ import sys
 # import textwrap
 import urllib.parse
 from GD_upload_update_file import upload_db_file
-from google_drive_to_sqlite.gd2sqlite import stream_indented_json
+from gd2sqlite import stream_indented_json
 from atlas_utils import (
     APIClient,
     get_file,
