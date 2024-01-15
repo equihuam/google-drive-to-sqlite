@@ -1,3 +1,5 @@
+import os.path
+
 import click
 import httpx
 # import itertools
@@ -379,19 +381,23 @@ def files(database,
 if __name__ == '__main__':
 
     # Confidential information
-    with open("privado/credenciales.json") as f:
-        credentials = json.load(f)
+    with open("privado/credenciales_mig_edu.json") as f:
+#    with open("privado/credenciales.json") as f:
+            credentials = json.load(f)
+
     credentials = {k: v for k, v in credentials["installed"].items()}
     with open("privado/directorio_a_procesar.json") as f:
         credentials.update(json.load(f))
 
+    # DEFAULT_SCOPE = "https://www.googleapis.com/auth/drive.readonly"
     DEFAULT_SCOPE = "https://www.googleapis.com/auth/drive.readonly"
     GOOGLE_CLIENT_ID = credentials["client_id"]
     GOOGLE_CLIENT_SECRET = credentials["client_secret"]
     TARGET_FOLDER = credentials["target_folder"]
     CONTROL_FOLDER = credentials["control_folder"]
 
-    #auth("privado/authenticated.json", GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, DEFAULT_SCOPE)
+    if not os.path.exists("privado/authenticated.json"):
+        auth("privado/authenticated.json", GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, DEFAULT_SCOPE)
 
     # If all is ready, this function scans Google Drive Folder and updates de SQLite file
     files("atlas-y-cat.db", authenticated="privado/authenticated.json", folder=TARGET_FOLDER,

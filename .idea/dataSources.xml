@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
-    <data-source source="LOCAL" name="atlas-y-cat" uuid="8af1185c-6f62-4bc3-9030-4427b38206bd">
+    <data-source source="LOCAL" name="atlas-y-cat" uuid="02381afe-6957-4c7e-acf2-8a459d0d71c9">
       <driver-ref>sqlite.xerial</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>org.sqlite.JDBC</jdbc-driver>
-      <jdbc-url>jdbc:sqlite:C:\Users\equih\0 Versiones\google-drive-to-sqlite\google_drive_to_sqlite\atlas-y-cat.db</jdbc-url>
+      <jdbc-url>jdbc:sqlite:C:\Users\equih\0 Versiones\google-drive-to-sqlite\gd2sqlite\atlas-y-cat.db</jdbc-url>
       <working-dir>$ProjectFileDir$</working-dir>
       <libraries>
         <library>

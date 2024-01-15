@@ -32,7 +32,7 @@ def upload_db_file(control_folder):
           creds.refresh(Request())
       else:
           flow = InstalledAppFlow.from_client_secrets_file(
-              "privado/credenciales.json", SCOPE
+              "privado/credenciales_mig_edu.json", SCOPE
           )
           creds = flow.run_local_server(port=0)
       # Save the credentials for the next run
@@ -42,20 +42,36 @@ def upload_db_file(control_folder):
   try:
     # create drive api client
     service = build("drive", "v3", credentials=creds)
+    response = (service.files()
+                .list(
+                    q="mimeType='application/vnd.sqlite3'",
+                    spaces="drive",
+                    fields="nextPageToken, files(id, name)")
+                .execute())
+    for file in response.get("files", []):
+        # Process change
+        if file.get("name") == "atlas-y-cat.db":
+            target_id = file.get("id")
+            print(f'Encontré el archivo: {file.get("name")}, con el ID: {target_id}')
+        else:
+            target_id = None
 
-    file_metadata = {"name": "atlas-y-cat.db", 'parents': [control_folder]}
+  except HttpError as error:
+    print(f"An error occurred: {error}")
+
+  try:
     media = MediaFileUpload("atlas-y-cat.db", mimetype="application/vnd.sqlite3")
-    # pylint: disable=maybe-no-member
-    # file = (
-    #     service.files().create(body=file_metadata,
-    #                            media_body=media,
-    #                            fields="id").execute()
-    #        )
-    #print(f'File ID: {file.get("id")}')
+    if not target_id:
+        file_metadata = {"name": "atlas-y-cat.db", 'parents': [control_folder]}
+        # If "atlas-y-cat.db" is missing
+        service.files().create(body=file_metadata,
+                               media_body=media,
+                               fields="id").execute()
+        #print(f'File ID: {file.get("id")}')
         #Update service.files().update 19YDUdrQWShywULwhw_p-iM6kLGtbubbG
-    service.files().update(fileId="19YDUdrQWShywULwhw_p-iM6kLGtbubbG",
-                           media_body=media).execute()
-
+    else:
+        service.files().update(fileId="1FMiWKUFzpIQ8A2FC_9xq-uEyrnIkD8Ng",
+                               media_body=media).execute()
   except HttpError as error:
     print(f"An error occurred: {error}")
     #file = None
