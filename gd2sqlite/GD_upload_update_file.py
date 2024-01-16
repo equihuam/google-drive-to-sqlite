@@ -80,7 +80,7 @@ def upload_db_file(control_folder):
 if __name__ == "__main__":
 
     # Confidential information
-    with open("privado/credenciales.json") as f:
+    with open("privado/credenciales_mig_edu.json") as f:
         credentials = json.load(f)
         credentials = {k: v for k, v in credentials["installed"].items()}
 
