@@ -39,6 +39,7 @@ def upload_db_file(control_folder):
       with open("privado/token.json", "w") as token:
           token.write(creds.to_json())
 
+  target_id = None
   try:
     # create drive api client
     service = build("drive", "v3", credentials=creds)
@@ -53,8 +54,6 @@ def upload_db_file(control_folder):
         if file.get("name") == "atlas-y-cat.db":
             target_id = file.get("id")
             print(f'Encontré el archivo: {file.get("name")}, con el ID: {target_id}')
-        else:
-            target_id = None
 
   except HttpError as error:
     print(f"An error occurred: {error}")
@@ -70,7 +69,7 @@ def upload_db_file(control_folder):
         #print(f'File ID: {file.get("id")}')
         #Update service.files().update 19YDUdrQWShywULwhw_p-iM6kLGtbubbG
     else:
-        service.files().update(fileId="1FMiWKUFzpIQ8A2FC_9xq-uEyrnIkD8Ng",
+        service.files().update(fileId=target_id,
                                media_body=media).execute()
   except HttpError as error:
     print(f"An error occurred: {error}")
