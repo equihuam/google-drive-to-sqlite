@@ -381,7 +381,7 @@ def files(database,
 if __name__ == '__main__':
 
     # Confidential information
-    with open("privado/credenciales_mig_edu.json") as f:
+    with open("privado/client_secret_Int-Edu.json") as f:
 #    with open("privado/credenciales.json") as f:
             credentials = json.load(f)
 
